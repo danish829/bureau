@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bureau — Monthly Meetings by Person</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --canvas:#F1F3F6;--panel:#FFF;--ink:#16203A;--ink-2:#243250;--muted:#6B7384;--faint:#9AA1AE;
+  --line:#E3E6EC;--line-2:#EEF0F4;
+  --act:#3B5BDB;--act-rgb:59,91,219;--act-soft:#E7ECFC;
+  --tel:#7B5BB5;--tel-rgb:123,91,181;--tel-soft:#F0ECF7;
+  --spend:#C0822B;--off:#2C8A6F;
+  --shadow:0 1px 2px rgba(22,32,58,.04),0 2px 8px rgba(22,32,58,.04);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+h2{margin:0;font-weight:700}
+::-webkit-scrollbar{height:10px;width:10px}::-webkit-scrollbar-thumb{background:#cfd4dc;border-radius:6px}::-webkit-scrollbar-track{background:#f3f4f7}
+
+.topbar{background:var(--ink);color:#dfe3ec;padding:13px 26px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:40;border-bottom:1px solid rgba(255,255,255,.07)}
+.topbar .tick{width:24px;height:3px;background:var(--act);border-radius:2px}
+.topbar .b1{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.2em;color:#8d97ad;text-transform:uppercase}
+.topbar .b2{font-family:'IBM Plex Sans Condensed';font-weight:700;font-size:17px;color:#fff;line-height:1.1}
+.topbar .src{font-family:'IBM Plex Mono';font-size:10px;color:#7f8aa1;border:1px solid rgba(255,255,255,.13);border-radius:14px;padding:3px 9px;margin-left:6px}
+.ctrls{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.seg{display:inline-flex;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:8px;overflow:hidden}
+.seg button{all:unset;cursor:pointer;padding:7px 13px;font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.02em;color:#aab2c4;transition:background .15s,color .15s}
+.seg button:hover{color:#fff}
+.seg button.on{background:var(--act);color:#fff}
+.seg.tel button.on{background:var(--tel)}
+.exb{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.02em;color:#aab2c4;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:6px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.exb:hover{color:#fff;background:rgba(255,255,255,.12)}
+.exb .bx{width:13px;height:13px;border-radius:3px;border:1.5px solid #7f8aa1;display:inline-flex;align-items:center;justify-content:center;font-size:9px}
+.exb.on{color:#fff;border-color:var(--act);background:rgba(59,91,219,.18)}
+.exb.on .bx{background:var(--act);border-color:var(--act)}
+
+.wrap{padding:24px;max-width:1340px;margin:0 auto}
+.vhead{margin-bottom:18px}
+.vhead .ey{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.vhead h2{font-family:'IBM Plex Sans Condensed';font-size:26px;margin-top:5px}
+.vhead p{color:var(--muted);max-width:820px;margin:7px 0 0;font-size:13.5px}
+
+.strip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:22px;box-shadow:var(--shadow)}
+.kpi{background:var(--panel);padding:15px 16px 14px}
+.kpi .kt{width:20px;height:3px;border-radius:2px;margin-bottom:11px}
+.kpi .kl{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .kv{font-family:'IBM Plex Mono';font-weight:600;font-size:23px;margin-top:6px}
+.kpi .ks{font-size:11px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;box-shadow:var(--shadow);margin-bottom:18px}
+.card .ch{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.card .ix{font-family:'IBM Plex Mono';font-size:11px;color:var(--faint)}
+.card .ct{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);font-weight:500}
+.card .sub{font-size:12px;color:var(--muted);margin:0 0 14px}
+.card .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.legend{display:flex;gap:14px;font-family:'IBM Plex Mono';font-size:10.5px;color:var(--muted);align-items:center}
+.legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.scale{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono';font-size:10px;color:var(--faint)}
+.scale .grad{width:90px;height:9px;border-radius:3px;background:linear-gradient(90deg, rgba(var(--act-rgb),.1), rgba(var(--act-rgb),1))}
+
+/* matrix */
+.matrix-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:9px}
+table.mx{border-collapse:separate;border-spacing:0;width:100%}
+table.mx th,table.mx td{padding:7px 8px;font-family:'IBM Plex Mono';font-size:11px;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.mx thead th{position:sticky;top:0;background:#F4F5F8;color:var(--muted);font-size:10px;letter-spacing:.03em;border-bottom:1px solid var(--line);z-index:2}
+table.mx thead th.pcol{left:0;z-index:4;text-align:left;cursor:pointer}
+table.mx thead th.tot{cursor:pointer}
+table.mx thead th .ar{color:var(--act);font-size:9px}
+table.mx tbody th.pcol{position:sticky;left:0;background:#fff;text-align:left;font-family:'IBM Plex Sans';font-weight:600;font-size:12.5px;border-right:1px solid var(--line);z-index:1;min-width:158px;cursor:pointer}
+table.mx tbody th.pcol .rm{font-family:'IBM Plex Mono';font-size:8.5px;color:var(--spend);background:#F7EEDD;border-radius:3px;padding:1px 4px;margin-left:6px;letter-spacing:.03em;vertical-align:1px}
+table.mx td.tot,table.mx th.tot{font-weight:600;background:#FAFAFC;border-left:1px solid var(--line)}
+table.mx tfoot th,table.mx tfoot td{position:sticky;bottom:0;background:#F4F5F8;border-top:1px solid var(--line);font-weight:600;font-size:10.5px;z-index:2;color:var(--ink-2)}
+table.mx tfoot th.pcol{left:0;z-index:3;text-align:left}
+tr.prow:hover th.pcol{color:var(--act)}
+tr.prow.sel th.pcol{box-shadow:inset 3px 0 0 var(--act);color:var(--act)}
+.cellv{display:block}
+.zero{color:#cfd3da}
+
+/* profile */
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:16px}
+.tile{border:1px solid var(--line);border-radius:9px;padding:12px 13px;background:#fff}
+.tile .tl{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.tile .tv{font-family:'IBM Plex Mono';font-weight:600;font-size:19px;margin-top:5px}
+.tile .td{font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.psel{font-family:'IBM Plex Mono';font-size:12px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px;color:var(--ink)}
+.chartbox{position:relative;width:100%}
+
+/* leaderboard */
+table.lb{width:100%;border-collapse:collapse}
+table.lb thead th{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+table.lb thead th.num{text-align:right}
+table.lb tbody td{padding:10px 12px;border-bottom:1px solid var(--line-2);font-size:13px}
+table.lb tbody td.num{text-align:right;font-family:'IBM Plex Mono';font-variant-numeric:tabular-nums}
+table.lb tbody tr:hover{background:#FAFBFC}
+table.lb tbody tr:last-child td{border-bottom:none}
+.nm{font-weight:600}
+.ratio{display:flex;height:7px;width:96px;border-radius:4px;overflow:hidden;background:var(--line)}
+.ratio .p{background:var(--act)}.ratio .t{background:var(--tel)}
+.rank{font-family:'IBM Plex Mono';color:var(--faint);font-size:11px}
+.trend{font-family:'IBM Plex Mono';font-size:11px}
+.trend.up{color:var(--off)}.trend.dn{color:#C2485B}.trend.fl{color:var(--faint)}
+
+.note{font-size:11.5px;color:var(--muted);margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.note b{color:var(--ink)}
+.foot{color:var(--faint);font-size:11px;font-family:'IBM Plex Mono';text-align:center;padding:8px 0 24px}
+
+@media (max-width:980px){
+  .strip{grid-template-columns:repeat(2,1fr)}
+  .tiles{grid-template-columns:repeat(3,1fr)}
+  .ctrls{width:100%;margin-left:0}
+  .wrap{padding:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div><div class="b1">Elets · Bureau Field Ops</div><div class="b2">Monthly Meetings by Person</div></div>
+  <span class="src">source: Meetings_Details</span>
+  <div class="ctrls">
+    <div class="seg" id="typeSeg">
+      <button data-t="all" class="on">All</button>
+      <button data-t="phys">Physical</button>
+      <button data-t="tel">Telephonic</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="vhead">
+    <div class="ey">Per-person · monthly cadence</div>
+    <h2>Who met whom, month by month</h2>
+    <p>Each value is one officer interaction recorded in <b>Meetings_Details</b>, grouped by the rep who logged it and the month it occurred. The matrix is the core view — switch the <b>type lens</b> to read physical visits vs telephonic follow-ups, or click any rep to profile their cadence below. Covers the eight active reps.</p>
+  </div>
+
+  <div class="strip" id="kpiStrip"></div>
+
+  <!-- MATRIX -->
+  <div class="card">
+    <div class="ch"><span class="ix">01</span><span class="ct">Person × Month matrix</span>
+      <div class="right">
+        <span class="scale"><span id="scaleLo">0</span><span class="grad" id="scaleGrad"></span><span id="scaleHi">—</span></span>
+      </div>
+    </div>
+    <div class="sub" id="mxSub">Cell shading scales to the busiest single person-month. Click a column header or the “Total” header to re-sort rows. Click a rep name to profile them below.</div>
+    <div class="matrix-wrap">
+      <table class="mx" id="mx"></table>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="card">
+    <div class="ch"><span class="ix">02</span><span class="ct">Rep monthly profile</span>
+      <div class="right"><select class="psel" id="psel"></select></div>
+    </div>
+    <div class="sub" id="profSub">Physical vs telephonic interactions per month for the selected rep.</div>
+    <div class="tiles" id="profTiles"></div>
+    <div class="chartbox" style="height:280px"><canvas id="cProfile"></canvas></div>
+  </div>
+
+  <!-- TEAM TREND -->
+  <div class="card">
+    <div class="ch"><span class="ix">03</span><span class="ct">Team monthly trend</span>
+      <div class="right legend">
+        <span><span class="sw" style="background:var(--act)"></span>Physical</span>
+        <span><span class="sw" style="background:var(--tel)"></span>Telephonic</span>
+        <span><span class="sw" style="background:var(--off);border-radius:50%"></span>Active reps</span>
+      </div>
+    </div>
+    <div class="sub">Total interactions per month, split by type (bars), with the count of reps active each month (line).</div>
+    <div class="chartbox" style="height:300px"><canvas id="cTrend"></canvas></div>
+    <div class="note" id="trendNote"></div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="card">
+    <div class="ch"><span class="ix">04</span><span class="ct">Per-person summary</span></div>
+    <div class="sub">Totals across the full period. Trend compares each rep’s most recent active month with their previous active month.</div>
+    <table class="lb" id="lb">
+      <thead><tr>
+        <th data-k="rank">#</th>
+        <th data-k="name">Rep</th>
+        <th data-k="total" class="num">Total</th>
+        <th data-k="phys" class="num">Physical</th>
+        <th data-k="tel" class="num">Telephonic</th>
+        <th>Mix (P:T)</th>
+        <th data-k="active" class="num">Active mo.</th>
+        <th data-k="avg" class="num">Avg / mo.</th>
+        <th data-k="peakVal" class="num">Peak month</th>
+        <th data-k="last">Last active</th>
+        <th data-k="trend" class="num">Trend</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>window.DATA={"meta":{"generated":"18 Jun 2026","source":"Meetings_Details","rows":3813,"persons":8,"months":27,"mmin":"Apr '24","mmax":"Jun '26","busiestMonth":"May '26","busiestVal":218,"topPerson":"Prabhakar Gupta","topVal":788,"avgPM":17.7,"maxCell":70,"maxPhys":63,"maxTel":27,"removedList":["Danish","Mayank Thakur","Nisha Samant","Puja Banerjee","Sudhanshu Mishra"]},"months":["2024-04","2024-05","2024-06","2024-07","2024-08","2024-09","2024-10","2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06"],"monthLabels":["Apr '24","May '24","Jun '24","Jul '24","Aug '24","Sep '24","Oct '24","Nov '24","Dec '24","Jan '25","Feb '25","Mar '25","Apr '25","May '25","Jun '25","Jul '25","Aug '25","Sep '25","Oct '25","Nov '25","Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],"persons":[{"name":"Prabhakar Gupta","total":788,"phys":710,"tel":78,"active":20,"peakMonth":"2025-04","peakVal":70,"avg":39.4,"first":"2024-11","last":"2026-06","trend":-73,"lastVal":8,"byMonth":{"2024-11":[42,35,7],"2024-12":[33,29,4],"2025-01":[42,37,5],"2025-02":[40,37,3],"2025-03":[22,19,3],"2025-04":[70,62,8],"2025-05":[35,28,7],"2025-06":[37,32,5],"2025-07":[33,31,2],"2025-08":[40,39,1],"2025-09":[44,41,3],"2025-10":[64,63,1],"2025-11":[55,52,3],"2025-12":[40,37,3],"2026-01":[48,46,2],"2026-02":[30,28,2],"2026-03":[32,28,4],"2026-04":[43,36,7],"2026-05":[30,23,7],"2026-06":[8,7,1]},"removed":false},{"name":"Rajiv Ranjan","total":761,"phys":406,"tel":355,"active":26,"peakMonth":"2024-10","peakVal":70,"avg":29.3,"first":"2024-05","last":"2026-06","trend":-31,"lastVal":18,"byMonth":{"2024-05":[50,27,23],"2024-06":[30,10,20],"2024-07":[31,9,22],"2024-08":[23,14,9],"2024-09":[46,25,21],"2024-10":[70,50,20],"2024-11":[38,11,27],"2024-12":[52,26,26],"2025-01":[35,26,9],"2025-02":[35,18,17],"2025-03":[21,11,10],"2025-04":[30,15,15],"2025-05":[22,12,10],"2025-06":[24,9,15],"2025-07":[21,14,7],"2025-08":[20,12,8],"2025-09":[24,9,15],"2025-10":[18,9,9],"2025-11":[22,11,11],"2025-12":[26,15,11],"2026-01":[21,12,9],"2026-02":[27,23,4],"2026-03":[8,3,5],"2026-04":[23,15,8],"2026-05":[26,13,13],"2026-06":[18,7,11]},"removed":false},{"name":"Krishnamishra","total":725,"phys":569,"tel":156,"active":26,"peakMonth":"2024-12","peakVal":57,"avg":27.9,"first":"2024-05","last":"2026-06","trend":-84,"lastVal":7,"byMonth":{"2024-05":[15,15,0],"2024-06":[28,28,0],"2024-07":[18,17,1],"2024-08":[13,12,1],"2024-09":[31,30,1],"2024-10":[29,29,0],"2024-11":[27,21,6],"2024-12":[57,34,23],"2025-01":[31,24,7],"2025-02":[36,30,6],"2025-03":[27,15,12],"2025-04":[17,11,6],"2025-05":[48,45,3],"2025-06":[38,33,5],"2025-07":[3,3,0],"2025-08":[28,17,11],"2025-09":[48,38,10],"2025-10":[27,19,8],"2025-11":[21,13,8],"2025-12":[23,17,6],"2026-01":[23,12,11],"2026-02":[40,38,2],"2026-03":[25,19,6],"2026-04":[22,14,8],"2026-05":[43,28,15],"2026-06":[7,7,0]},"removed":false},{"name":"Ritika","total":604,"phys":515,"tel":89,"active":23,"peakMonth":"2024-05","peakVal":60,"avg":26.3,"first":"2024-05","last":"2026-06","trend":-72,"lastVal":7,"byMonth":{"2024-05":[60,41,19],"2024-06":[20,18,2],"2024-08":[43,36,7],"2024-09":[38,38,0],"2024-12":[13,11,2],"2025-01":[18,18,0],"2025-02":[12,12,0],"2025-03":[21,8,13],"2025-04":[37,18,19],"2025-05":[37,23,14],"2025-06":[29,29,0],"2025-07":[32,32,0],"2025-08":[34,34,0],"2025-09":[21,21,0],"2025-10":[31,31,0],"2025-11":[34,34,0],"2025-12":[31,31,0],"2026-01":[22,19,3],"2026-02":[18,18,0],"2026-03":[7,7,0],"2026-04":[14,14,0],"2026-05":[25,17,8],"2026-06":[7,5,2]},"removed":false},{"name":"Priya","total":557,"phys":365,"tel":192,"active":26,"peakMonth":"2026-05","peakVal":33,"avg":21.4,"first":"2024-05","last":"2026-06","trend":-67,"lastVal":11,"byMonth":{"2024-05":[20,11,9],"2024-06":[21,10,11],"2024-07":[26,8,18],"2024-08":[18,7,11],"2024-09":[25,13,12],"2024-10":[23,14,9],"2024-11":[22,13,9],"2024-12":[17,11,6],"2025-01":[24,21,3],"2025-02":[18,10,8],"2025-03":[21,20,1],"2025-04":[23,20,3],"2025-05":[21,21,0],"2025-06":[19,19,0],"2025-07":[22,13,9],"2025-08":[21,15,6],"2025-09":[22,19,3],"2025-10":[24,13,11],"2025-11":[22,9,13],"2025-12":[21,9,12],"2026-01":[20,11,9],"2026-02":[21,21,0],"2026-03":[20,20,0],"2026-04":[22,14,8],"2026-05":[33,18,15],"2026-06":[11,5,6]},"removed":false},{"name":"Nijhum Rudra","total":134,"phys":134,"tel":0,"active":9,"peakMonth":"2026-02","peakVal":28,"avg":14.9,"first":"2025-04","last":"2026-05","trend":50,"lastVal":15,"byMonth":{"2025-04":[23,23,0],"2025-05":[13,13,0],"2025-06":[14,14,0],"2025-07":[3,3,0],"2026-01":[16,16,0],"2026-02":[28,28,0],"2026-03":[12,12,0],"2026-04":[10,10,0],"2026-05":[15,15,0]},"removed":false},{"name":"Hemangini","total":128,"phys":98,"tel":30,"active":14,"peakMonth":"2024-05","peakVal":46,"avg":9.1,"first":"2024-04","last":"2026-06","trend":-57,"lastVal":6,"byMonth":{"2024-04":[1,1,0],"2024-05":[46,25,21],"2024-07":[18,10,8],"2024-08":[4,3,1],"2024-09":[19,19,0],"2024-10":[1,1,0],"2025-04":[1,1,0],"2025-07":[9,9,0],"2025-12":[3,3,0],"2026-01":[4,4,0],"2026-02":[1,1,0],"2026-04":[1,1,0],"2026-05":[14,14,0],"2026-06":[6,6,0]},"removed":false},{"name":"Priyanka Dua","total":116,"phys":96,"tel":20,"active":12,"peakMonth":"2026-05","peakVal":32,"avg":9.7,"first":"2025-05","last":"2026-06","trend":-78,"lastVal":7,"byMonth":{"2025-05":[4,4,0],"2025-06":[3,3,0],"2025-07":[1,1,0],"2025-08":[1,1,0],"2025-11":[1,1,0],"2025-12":[1,1,0],"2026-01":[13,11,2],"2026-02":[16,15,1],"2026-03":[15,14,1],"2026-04":[22,20,2],"2026-05":[32,20,12],"2026-06":[7,5,2]},"removed":false}],"monthly":[{"month":"2024-04","label":"Apr '24","all":1,"phys":1,"tel":0,"active":1},{"month":"2024-05","label":"May '24","all":191,"phys":119,"tel":72,"active":5},{"month":"2024-06","label":"Jun '24","all":99,"phys":66,"tel":33,"active":4},{"month":"2024-07","label":"Jul '24","all":93,"phys":44,"tel":49,"active":4},{"month":"2024-08","label":"Aug '24","all":101,"phys":72,"tel":29,"active":5},{"month":"2024-09","label":"Sep '24","all":159,"phys":125,"tel":34,"active":5},{"month":"2024-10","label":"Oct '24","all":123,"phys":94,"tel":29,"active":4},{"month":"2024-11","label":"Nov '24","all":129,"phys":80,"tel":49,"active":4},{"month":"2024-12","label":"Dec '24","all":172,"phys":111,"tel":61,"active":5},{"month":"2025-01","label":"Jan '25","all":150,"phys":126,"tel":24,"active":5},{"month":"2025-02","label":"Feb '25","all":141,"phys":107,"tel":34,"active":5},{"month":"2025-03","label":"Mar '25","all":112,"phys":73,"tel":39,"active":5},{"month":"2025-04","label":"Apr '25","all":201,"phys":150,"tel":51,"active":7},{"month":"2025-05","label":"May '25","all":180,"phys":146,"tel":34,"active":7},{"month":"2025-06","label":"Jun '25","all":164,"phys":139,"tel":25,"active":7},{"month":"2025-07","label":"Jul '25","all":124,"phys":106,"tel":18,"active":8},{"month":"2025-08","label":"Aug '25","all":144,"phys":118,"tel":26,"active":6},{"month":"2025-09","label":"Sep '25","all":159,"phys":128,"tel":31,"active":5},{"month":"2025-10","label":"Oct '25","all":164,"phys":135,"tel":29,"active":5},{"month":"2025-11","label":"Nov '25","all":155,"phys":120,"tel":35,"active":6},{"month":"2025-12","label":"Dec '25","all":145,"phys":113,"tel":32,"active":7},{"month":"2026-01","label":"Jan '26","all":167,"phys":131,"tel":36,"active":8},{"month":"2026-02","label":"Feb '26","all":181,"phys":172,"tel":9,"active":8},{"month":"2026-03","label":"Mar '26","all":119,"phys":103,"tel":16,"active":7},{"month":"2026-04","label":"Apr '26","all":157,"phys":124,"tel":33,"active":8},{"month":"2026-05","label":"May '26","all":218,"phys":148,"tel":70,"active":8},{"month":"2026-06","label":"Jun '26","all":64,"phys":42,"tel":22,"active":7}],"grand":{"all":3813,"phys":2893,"tel":920}};</script>
+<script>
+const D=window.DATA, M=D.months, ML=D.monthLabels;
+const TI={all:0,phys:1,tel:2};
+const RGB={all:'var(--act-rgb)',phys:'var(--act-rgb)',tel:'var(--tel-rgb)'};
+const RGBv={all:'59,91,219',phys:'59,91,219',tel:'123,91,181'};
+let TYPE='all', SORT={k:'total',desc:true}, SEL=null;
+let LBSORT={k:'total',desc:true};
+
+const nf=n=>Number(n||0).toLocaleString('en-IN');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const monthIdx=m=>M.indexOf(m);
+const lbl=m=>{const i=monthIdx(m);return i>=0?ML[i]:m;};
+
+function persons(){ return D.persons; }
+function cell(p,m){ return p.byMonth[m]||[0,0,0]; }
+function pTotal(p){ return TYPE==='all'?p.total:TYPE==='phys'?p.phys:p.tel; }
+function monthTotals(){ // recompute for current type + exclude
+  const t=TI[TYPE]; return M.map(m=>persons().reduce((s,p)=>s+(p.byMonth[m]?p.byMonth[m][t]:0),0)); }
+function maxCellNow(){ const t=TI[TYPE]; let mx=1; persons().forEach(p=>Object.values(p.byMonth).forEach(c=>{if(c[t]>mx)mx=c[t];})); return mx; }
+function grand(){ const ps=persons(); return {all:ps.reduce((s,p)=>s+p.total,0),phys:ps.reduce((s,p)=>s+p.phys,0),tel:ps.reduce((s,p)=>s+p.tel,0)}; }
+
+/* ---------- KPIs ---------- */
+function kpis(){
+  const ps=persons(), g=grand(), mt=M.map(m=>ps.reduce((s,p)=>s+(p.byMonth[m]?p.byMonth[m][0]:0),0));
+  let bi=0; mt.forEach((v,i)=>{if(v>mt[bi])bi=i;});
+  const top=[...ps].sort((a,b)=>b.total-a.total)[0];
+  const avg=ps.length? (g.all/(ps.length*M.length)).toFixed(1):'0';
+  const data=[
+    {l:'Officer interactions',v:nf(g.all),s:nf(g.phys)+' phys · '+nf(g.tel)+' tel',c:'var(--act)'},
+    {l:'Reps tracked',v:nf(ps.length),s:'reps logging meetings',c:'var(--act)'},
+    {l:'Months covered',v:nf(M.length),s:D.meta.mmin+' → '+D.meta.mmax,c:'var(--act)'},
+    {l:'Busiest month',v:ML[bi],s:nf(mt[bi])+' interactions',c:'var(--tel)'},
+    {l:'Top rep',v:top?top.name.split(' ')[0]:'—',s:top?nf(top.total)+' total':'',c:'var(--off)'},
+    {l:'Avg / rep·month',v:avg,s:'across all months',c:'var(--off)'},
+  ];
+  document.getElementById('kpiStrip').innerHTML=data.map(k=>`<div class="kpi"><div class="kt" style="background:${k.c}"></div><div class="kl">${k.l}</div><div class="kv">${esc(k.v)}</div><div class="ks">${esc(k.s)}</div></div>`).join('');
+}
+
+/* ---------- MATRIX ---------- */
+function shade(v,max){ if(v<=0) return {bg:'transparent',txt:'',cls:'zero'};
+  const a=0.10+0.90*Math.min(1,v/max); const txt=a>0.56?'#fff':'#16203A';
+  return {bg:`rgba(${RGBv[TYPE]},${a.toFixed(3)})`,txt,cls:''}; }
+function sortedPersons(){
+  const ps=persons(), k=SORT.k;
+  return [...ps].sort((a,b)=>{
+    let x,y;
+    if(k==='name'){x=a.name;y=b.name;return x.localeCompare(y)*(SORT.desc?-1:1);}
+    if(k==='total'){x=pTotal(a);y=pTotal(b);}
+    else {const t=TI[TYPE];x=a.byMonth[k]?a.byMonth[k][t]:0;y=b.byMonth[k]?b.byMonth[k][t]:0;}
+    return (x-y)*(SORT.desc?-1:1);
+  });
+}
+function renderMatrix(){
+  const t=TI[TYPE], max=maxCellNow(), ps=sortedPersons(), mt=monthTotals(), g=grand();
+  const gtot=TYPE==='all'?g.all:TYPE==='phys'?g.phys:g.tel;
+  document.getElementById('scaleHi').textContent=max;
+  document.getElementById('scaleGrad').style.background=`linear-gradient(90deg, rgba(${RGBv[TYPE]},.1), rgba(${RGBv[TYPE]},1))`;
+  const arrow=k=> SORT.k===k? `<span class="ar">${SORT.desc?'▼':'▲'}</span>`:'';
+  let h='<thead><tr>';
+  h+=`<th class="pcol" data-sort="name">Rep ${arrow('name')}</th>`;
+  ML.forEach((m,i)=>{h+=`<th data-sort="${M[i]}" style="cursor:pointer">${m}${arrow(M[i])}</th>`;});
+  h+=`<th class="tot" data-sort="total">Total ${arrow('total')}</th></tr></thead>`;
+  h+='<tbody>';
+  ps.forEach(p=>{
+    h+=`<tr class="prow ${SEL===p.name?'sel':''}" data-p="${esc(p.name)}">`;
+    h+=`<th class="pcol" data-p="${esc(p.name)}">${esc(p.name)}</th>`;
+    M.forEach(m=>{const v=(p.byMonth[m]||[0,0,0])[t];const s=shade(v,max);
+      h+=`<td class="cell ${s.cls}" style="background:${s.bg};color:${s.txt}" title="${esc(p.name)} · ${lbl(m)}: ${v}">${v||''}</td>`;});
+    h+=`<td class="tot">${nf(pTotal(p))}</td></tr>`;
+  });
+  h+='</tbody><tfoot><tr><th class="pcol">Monthly total</th>';
+  mt.forEach(v=>{h+=`<td>${v||''}</td>`;});
+  h+=`<td class="tot">${nf(gtot)}</td></tr></tfoot>`;
+  const mx=document.getElementById('mx'); mx.innerHTML=h;
+  mx.querySelectorAll('[data-sort]').forEach(el=>el.addEventListener('click',()=>{
+    const k=el.dataset.sort; SORT.desc = SORT.k===k? !SORT.desc : true; SORT.k=k; renderMatrix();}));
+  mx.querySelectorAll('[data-p]').forEach(el=>el.addEventListener('click',()=>selectPerson(el.dataset.p)));
+}
+
+/* ---------- PROFILE ---------- */
+let cProfile;
+function selectPerson(name){ SEL=name; document.getElementById('psel').value=name;
+  document.querySelectorAll('#mx tr.prow').forEach(tr=>tr.classList.toggle('sel',tr.dataset.p===name));
+  renderProfile(); }
+function renderProfile(){
+  const p=D.persons.find(x=>x.name===SEL)||persons()[0]; if(!p)return; SEL=p.name;
+  document.getElementById('profSub').innerHTML=`Physical vs telephonic interactions per month — <b>${esc(p.name)}</b>.`;
+  const phys=M.map(m=>(p.byMonth[m]||[0,0,0])[1]), tel=M.map(m=>(p.byMonth[m]||[0,0,0])[2]);
+  const tiles=[
+    {l:'Total',v:nf(p.total),d:'interactions'},
+    {l:'Physical',v:nf(p.phys),d:Math.round(p.phys/p.total*100)+'% of total'},
+    {l:'Telephonic',v:nf(p.tel),d:Math.round(p.tel/p.total*100)+'% of total'},
+    {l:'Active months',v:nf(p.active)+'/'+M.length,d:'months with activity'},
+    {l:'Peak month',v:lbl(p.peakMonth),d:nf(p.peakVal)+' interactions'},
+    {l:'Avg / active mo.',v:p.avg,d:'per active month'},
+  ];
+  document.getElementById('profTiles').innerHTML=tiles.map(t=>`<div class="tile"><div class="tl">${t.l}</div><div class="tv">${esc(t.v)}</div><div class="td">${esc(t.d)}</div></div>`).join('');
+  if(cProfile)cProfile.destroy();
+  cProfile=new Chart(document.getElementById('cProfile'),{type:'bar',data:{labels:ML,datasets:[
+    {label:'Physical',data:phys,backgroundColor:'#3B5BDB',borderRadius:2,stack:'s',maxBarThickness:26},
+    {label:'Telephonic',data:tel,backgroundColor:'#7B5BB5',borderRadius:2,stack:'s',maxBarThickness:26}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{font:{family:'IBM Plex Mono',size:10.5},boxWidth:10,boxHeight:10}},
+      tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.raw}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{family:'IBM Plex Mono',size:9},maxRotation:90,minRotation:0}},
+        y:{stacked:true,grid:{color:'#E3E6EC'},border:{display:false},ticks:{font:{family:'IBM Plex Mono',size:10}}}}}});
+}
+
+/* ---------- TEAM TREND ---------- */
+let cTrend;
+function renderTrend(){
+  const ps=persons();
+  const phys=M.map(m=>ps.reduce((s,p)=>s+(p.byMonth[m]?p.byMonth[m][1]:0),0));
+  const tel =M.map(m=>ps.reduce((s,p)=>s+(p.byMonth[m]?p.byMonth[m][2]:0),0));
+  const active=M.map(m=>ps.reduce((s,p)=>s+(p.byMonth[m]?1:0),0));
+  if(cTrend)cTrend.destroy();
+  cTrend=new Chart(document.getElementById('cTrend'),{data:{labels:ML,datasets:[
+    {type:'bar',label:'Physical',data:phys,backgroundColor:'#3B5BDB',borderRadius:2,stack:'s',yAxisID:'y',maxBarThickness:24},
+    {type:'bar',label:'Telephonic',data:tel,backgroundColor:'#7B5BB5',borderRadius:2,stack:'s',yAxisID:'y',maxBarThickness:24},
+    {type:'line',label:'Active reps',data:active,borderColor:'#2C8A6F',backgroundColor:'#2C8A6F',tension:.3,borderWidth:2,pointRadius:2,yAxisID:'y1'}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.raw}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{family:'IBM Plex Mono',size:9},maxRotation:90,minRotation:0}},
+        y:{stacked:true,grid:{color:'#E3E6EC'},border:{display:false},ticks:{font:{family:'IBM Plex Mono',size:10}},title:{display:true,text:'interactions',font:{family:'IBM Plex Mono',size:9}}},
+        y1:{position:'right',grid:{display:false},border:{display:false},suggestedMax:Math.max(...active)+2,ticks:{font:{family:'IBM Plex Mono',size:10},stepSize:2},title:{display:true,text:'active reps',font:{family:'IBM Plex Mono',size:9}}}}}});
+  const g=grand(), busiest=[...M.map((m,i)=>({m,v:phys[i]+tel[i]}))].sort((a,b)=>b.v-a.v)[0];
+  document.getElementById('trendNote').innerHTML=`Across <b>${M.length}</b> months, <b>${nf(g.all)}</b> interactions — <b>${Math.round(g.phys/g.all*100)}%</b> physical. Busiest: <b>${lbl(busiest.m)}</b> (${nf(busiest.v)}). Telephonic follow-ups tend to spike around event-heavy months.`;
+}
+
+/* ---------- LEADERBOARD ---------- */
+function renderLB(){
+  const ps=persons().map((p,i)=>({...p}));
+  const k=LBSORT.k;
+  ps.sort((a,b)=>{ if(k==='rank')return (b.total-a.total)*(LBSORT.desc?1:-1);
+    let x,y;
+    if(k==='name'){x=a.name;y=b.name;return x.localeCompare(y)*(LBSORT.desc?-1:1);}
+    if(k==='last'){x=a.last||'';y=b.last||'';return String(x).localeCompare(String(y))*(LBSORT.desc?-1:1);}
+    if(k==='trend'){x=a.trend==null?-1e9:a.trend;y=b.trend==null?-1e9:b.trend;}
+    else {x=a[k]||0;y=b[k]||0;}
+    return (x-y)*(LBSORT.desc?-1:1);});
+  const tb=document.querySelector('#lb tbody');
+  tb.innerHTML=ps.map((p,i)=>{
+    const pp=Math.round(p.phys/p.total*100), tp=100-pp;
+    let tr='<span class="trend fl">— new</span>';
+    if(p.trend!=null) tr= p.trend>0?`<span class="trend up">▲ ${p.trend}%</span>`: p.trend<0?`<span class="trend dn">▼ ${Math.abs(p.trend)}%</span>`:`<span class="trend fl">▬ 0%</span>`;
+    return `<tr>
+      <td class="rank">${i+1}</td>
+      <td><span class="nm">${esc(p.name)}</span></td>
+      <td class="num">${nf(p.total)}</td>
+      <td class="num">${nf(p.phys)}</td>
+      <td class="num">${nf(p.tel)}</td>
+      <td><div class="ratio" title="${pp}% physical / ${tp}% telephonic"><div class="p" style="width:${pp}%"></div><div class="t" style="width:${tp}%"></div></div></td>
+      <td class="num">${p.active}/${M.length}</td>
+      <td class="num">${p.avg}</td>
+      <td class="num">${lbl(p.peakMonth)} · ${p.peakVal}</td>
+      <td class="num" style="text-align:left">${lbl(p.last)}</td>
+      <td class="num">${tr}</td></tr>`;
+  }).join('');
+}
+document.querySelectorAll('#lb thead th').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.k; if(!k)return; LBSORT.desc=LBSORT.k===k?!LBSORT.desc:true; LBSORT.k=k; renderLB();}));
+
+/* ---------- controls ---------- */
+document.querySelectorAll('#typeSeg button').forEach(b=>b.addEventListener('click',()=>{
+  TYPE=b.dataset.t;
+  document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  document.getElementById('typeSeg').classList.toggle('tel',TYPE==='tel');
+  if(SORT.k!=='name'&&SORT.k!=='total'&&!M.includes(SORT.k)) SORT={k:'total',desc:true};
+  renderMatrix();
+}));
+
+function buildPsel(){
+  const sel=document.getElementById('psel'); const cur=SEL;
+  sel.innerHTML=persons().map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  if(cur&&persons().some(p=>p.name===cur))sel.value=cur;
+}
+document.getElementById('psel').addEventListener('change',e=>selectPerson(e.target.value));
+
+/* ---------- boot ---------- */
+document.getElementById('foot').textContent='Source: Meetings_Details · '+D.meta.rows+' interactions · generated '+D.meta.generated;
+SEL=D.persons[0].name;
+kpis(); buildPsel(); renderMatrix(); renderProfile(); renderTrend(); renderLB();
+</script>
+</body>
+</html>
